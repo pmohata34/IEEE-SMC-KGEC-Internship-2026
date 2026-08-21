@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>TempestGuard Dashboard</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+            rel="stylesheet">
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+
+    <body>
+        <div class="shell">
+            <div class="topbar panel">
+                <div class="brand">
+                    <div class="brand-mark">⛈</div>
+                    <div>TempestGuard</div>
+                </div>
+                <div class="status-pill">
+                    <span class="status-dot {{ 'safe-dot' if active_threats == 0 else 'storm-dot' }}"></span>
+                    {{ 'All Nodes Safe' if active_threats == 0 else active_threats ~ ' Nodes at Risk' }}
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="panel map-panel">
+                    <div class="panel-title">
+                        <div>
+                            <h2>Network Map</h2>
+                            <div class="panel-sub">Corrected node positions and auto-fit map bounds.</div>
+                        </div>
+                    </div>
+
+                    <div class="stats-row">
+                        <div class="stat-box">
+                            <div class="stat-label">Total Nodes</div>
+                            <div class="stat-value">{{ rows|length }}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Safe Nodes</div>
+                            <div class="stat-value">{{ safe_count }}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Threat Nodes</div>
+                            <div class="stat-value">{{ active_threats }}</div>
+                        </div>
+                    </div>
+
+                    <div id="map"></div>
+
+                    <div class="insight-box">
+                        <h3>Model Insight</h3>
+                        <p>
+                            {% if active_threats == 0 %}
+                            The latest readings show stable atmospheric conditions across the monitored network.
+                            {% else %}
+                            One or more nodes are showing thunderstorm risk, and the nearest safe node is highlighted in the
+                            recommendation cards.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="cards-col">
+                    {% for r in rows %}
+                    <div class="node-card {{ 'storm' if not r.is_safe else '' }}">
+                        <div class="node-top">
+                            <div>
+                                <h2 class="node-name">{{ r.node }}</h2>
+                                <div class="node-meta">LAT: {{ r.lat }} | LON: {{ r.lon }}</div>
+                            </div>
+                            <div class="badge {{ 'badge-safe' if r.is_safe else 'badge-storm' }}">{{ r.risk }}</div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-box">
+                                <div class="metric-label">Temp</div>
+                                <div class="metric-value">{{ r.temp }}&deg;C</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Pressure</div>
+                                <div class="metric-value">{{ r.pressure }} hPa</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Humidity</div>
+                                <div class="metric-value">{{ r.humidity }}%</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Wind</div>
+                                <div class="metric-value">{{ r.wind_speed }} m/s</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Cloudiness</div>
+                                <div class="metric-value">{{ r.cloudiness }}%</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Rain 1h</div>
+                                <div class="metric-value">{{ r.rain_1h }} mm</div>
+                            </div>
+                        </div>
+
+                        <div class="rec-box {{ 'rec-safe' if r.is_safe else 'rec-storm' }}">
+                            {% if r.is_safe %}
+                            <strong>Location Safe.</strong> Current weather parameters are stable and no relocation is
+                            required.
+                            {% else %}
+                            <strong>Thunderstorm Risk Detected.</strong>
+                            {% if r.nearest_safe_node %}
+                            Nearest safest place:
+                            <strong>{{ r.nearest_safe_node }}</strong>
+                            ({{ r.nearest_safe_dist }} km away).
+                            {% else %}
+                            No mapped safe node is available right now. Move indoors immediately.
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <script id="dashboard-data" type="application/json">
+            {{ {
+                "nodes": rows,
+                "center": { "lat": center_lat, "lon": center_lon }
+            } | tojson }}
+        </script>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+        <script src="{{ url_for('static', filename='app.js') }}"></script>
+    </body>
+
+</html>
